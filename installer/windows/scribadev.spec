@@ -58,7 +58,7 @@ _common = dict(
     # bundle, a resolução cai no addons — se o pip estiver reescrevendo a pasta,
     # até os toasts do app morrem com EACCES. Bundlado, o FrozenImporter (meta
     # path) vence o addons sempre.
-    hiddenimports=_pip_hidden + ["typing_extensions"],
+    hiddenimports=_pip_hidden + ["typing_extensions", "cProfile", "pstats"],
     excludes=_excludes,
     noarchive=False,
     module_collection_mode=_pip_collection_mode,
