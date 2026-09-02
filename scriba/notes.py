@@ -102,8 +102,9 @@ para reduzir o custo do join — volume alto na produção [00:14:20].")
 
 ## Pendências e Ações
 (o que ficou em ABERTO: dúvidas não resolvidas, definições faltando e tarefas com responsável \
-quando citado; cite [HH:MM:SS]. Esta seção avisa a IA o que NÃO está definido — seja explícito \
-sobre cada ambiguidade para que ela sinalize em vez de presumir.)
+quando citado; cite [HH:MM:SS]. CADA item DEVE ocupar obrigatoriamente 1 única linha (um único \
+bullet "- "), nunca quebre linhas nem crie sub-bullets para responsável ou prazo. \
+Ex.: "- [Ação] — Responsável: X · Prazo: Y [HH:MM:SS]".)
 
 ## Participantes
 (Liste só quem a transcrição evidencia. Separe quem ESTAVA na call de quem foi só CITADO — nunca misture os dois:
@@ -1134,6 +1135,11 @@ def guess_voice_name(label: str, desc: str) -> str:
 
 # ---- action items: seção "Pendências e Ações" como checklist (#22) ----------
 _ACTIONS_TITLE = re.compile(r"(?i)^\s*pend[êe]ncias?\s+e\s+a[çc][õo]es\s*$")
+_META_ATTR_RE = re.compile(
+    r"^(?:\*\*)?(respons[áa]vel|prazo|depend[êe]ncia|situa[çc][ãa]o(?:\s+atual)?|status)(?:\*\*)?\s*:\s*(.*)$",
+    re.IGNORECASE,
+)
+_ACTION_PREFIX_RE = re.compile(r"^(?:\*\*)?a[çc][ãa]o(?:\*\*)?\s*:\s*(.*)$", re.IGNORECASE)
 
 
 def _section_body(md: str, title_re: re.Pattern) -> str | None:
@@ -1171,25 +1177,42 @@ def parse_action_items(md: str) -> list[dict]:
     bullets (a IA às vezes escreve um parágrafo).
 
     Tolerante às variações de negrito da IA: tanto `**[X]** texto` (canônica) quanto
-    `**[X] frase em negrito** resto` (o fechamento vem depois). `label` e `text` são
-    exibidos como TEXTO PURO (chips/QLabel da capa e do hub), então os marcadores `**`
-    residuais saem do `text`; o `raw` fica intacto (é dele que vem a `key` — estados
-    salvos em .actions.json não podem invalidar)."""
+    `**[X] frase em negrito** resto` (o fechamento vem depois). Sub-bullets indentados
+    ou quebras de linha com metadados ("Responsável:", "Prazo:", "Dependência:") são
+    agregados na pendência anterior em uma única linha. `label` e `text` são exibidos
+    como TEXTO PURO (chips/QLabel da capa e do hub)."""
     body = _section_body(md, _ACTIONS_TITLE)
     if not body:
         return []
     items: list[dict] = []
     for ln in body.splitlines():
+        is_indented = ln.startswith((" ", "\t"))
         s = ln.strip()
         if not (s.startswith("- ") or s.startswith("* ")):
             continue
         raw = s[2:].strip()
         if not raw or raw.lower().startswith("nada identificad"):
             continue
+
+        # Sub-bullets indentados ou atributos (Responsável:, Prazo:, etc.) agregam ao item anterior
+        m_attr = _META_ATTR_RE.match(raw)
+        if items and (is_indented or m_attr):
+            attr_clean = raw.replace("**", "").strip()
+            items[-1]["text"] = items[-1]["text"].rstrip(". ") + f" · {attr_clean.rstrip('.')}"
+            items[-1]["raw"] += f" — {raw}"
+            items[-1]["key"] = action_item_key(items[-1]["raw"])
+            continue
+
         m = re.match(r"^\*\*\[([^\]]+)\]\*{0,2}\s*(.*)$", raw)
         label, text = (m.group(1).strip(), m.group(2).strip()) if m else ("", raw)
         label = label.strip("\"'“”‘’")          # a IA às vezes cita o rótulo: ["Eu"]
         text = text.replace("**", "").strip()   # negrito não renderiza em QLabel puro
+
+        # Remove prefixo redundante "Ação: " se houver
+        m_act = _ACTION_PREFIX_RE.match(text)
+        if m_act:
+            text = m_act.group(1).strip()
+
         items.append({"raw": raw, "label": label, "text": text, "key": action_item_key(raw)})
     return items
 

@@ -668,6 +668,28 @@ class ActionItemsTests(unittest.TestCase):
     def test_key_difere_por_texto(self):
         self.assertNotEqual(notes.action_item_key("faz X"), notes.action_item_key("faz Y"))
 
+    def test_agrega_sub_bullets_e_atributos_em_linha_unica(self):
+        # caso real (#188): IA quebra linhas criando itens desnecessários para Responsável/Prazo/Dependência
+        md = (
+            "## Pendências e Ações\n"
+            "- **Ação:** Contatar Júnior para confirmar atualização [00:06:38].\n"
+            "- **Responsável:** Marco.\n"
+            "- **Prazo:** Não definido.\n"
+            "- **Dependência:** Retorno de Henrique.\n"
+            "- **Ação:** Reativar chave do Bedrock.\n"
+            "  - **Responsável:** Não definido.\n"
+            "  - **Prazo:** Não definido.\n"
+            "  - **Dependência:** Contato com suporte.\n"
+            "  - **Situação atual:** Pendente. [00:17:25]\n"
+        )
+        items = notes.parse_action_items(md)
+        self.assertEqual(len(items), 2)  # 2 ações reais em vez de 9 checkboxes
+        self.assertIn("Contatar Júnior", items[0]["text"])
+        self.assertIn("Responsável: Marco", items[0]["text"])
+        self.assertIn("Dependência: Retorno de Henrique", items[0]["text"])
+        self.assertIn("Reativar chave do Bedrock", items[1]["text"])
+        self.assertIn("Contato com suporte", items[1]["text"])
+
 
 class ActionStateTests(unittest.TestCase):
     def setUp(self):

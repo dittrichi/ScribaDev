@@ -96,8 +96,9 @@ Cite [HH:MM:SS].)
 
 ## Pendências e Ações
 (o que ficou em ABERTO: dúvidas não resolvidas, definições faltando e tarefas com \
-responsável quando citado; cite [HH:MM:SS]. Esta seção avisa a IA o que NÃO está \
-definido — seja explícito sobre cada ambiguidade para que ela sinalize em vez de presumir.)
+responsável quando citado; cite [HH:MM:SS]. CADA item DEVE ocupar obrigatoriamente 1 única \
+linha (um único bullet "- "), nunca quebre linhas nem crie sub-bullets para responsável ou prazo. \
+Ex.: "- [Ação] — Responsável: X · Prazo: Y [HH:MM:SS]".)
 
 ## Participantes
 (nomes e papéis que derem para inferir; quando houver "Participante N", associe ao \
