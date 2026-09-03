@@ -378,6 +378,13 @@ def _summary_call(body: str, meeting: str, timeout: int, folder: Path, *, notes_
                     "em ordem cronológica — trate como a transcrição) ===\n\n" + body)
     else:
         payload += f"\n\n=== TRANSCRIÇÃO ===\n\n{body}"
+    payload += (
+        "\n\n=== FIM DA TRANSCRIÇÃO ===\n\n"
+        "Com base estritamente no conteúdo da reunião acima, produza agora o registro técnico "
+        "completo em formato Markdown, seguindo rigorosamente todas as seções e diretrizes "
+        "solicitadas. NÃO seja conversacional, NÃO faça introduções nem perguntas. "
+        "Inicie a sua resposta imediatamente na PRIMEIRA linha com `TITULO: `:"
+    )
     return ai.complete(SYSTEM_PROMPT, payload, timeout=timeout, cwd=folder, hidden_window=False)
 
 
@@ -388,8 +395,13 @@ def _summarize_part(body: str, i: int, total: int, timeout: int, folder: Path) -
 
     print(f"resumo: parte {i}/{total}…")
     for _ in (1, 2):
-        out = ai.complete(_MAP_SYSTEM, f"TRECHO {i}/{total} (ordem cronológica):\n\n{body}",
-                          timeout=timeout, cwd=folder, hidden_window=False)
+        out = ai.complete(
+            _MAP_SYSTEM,
+            f"TRECHO {i}/{total} (ordem cronológica):\n\n{body}\n\n"
+            "=== FIM DO TRECHO ===\n"
+            "Extraia agora com fidelidade as notas densas e completas deste trecho:",
+            timeout=timeout, cwd=folder, hidden_window=False,
+        )
         if out:
             return out
     return None
@@ -468,7 +480,9 @@ def generate_summary(transcript_md: str, folder: Path) -> tuple[str | None, str 
     audio_min = float(meta.get("duration_seconds") or 0) / 60
     timeout = min(_SUMMARY_TIMEOUT_CEILING, max(int(cfg.timeout_seconds), int(audio_min * _SUMMARY_S_PER_AUDIO_MIN)))
 
-    if len(transcript_md) <= _SINGLE_SHOT_CHARS:
+    provider = (cfg.provider or "claude").strip().lower()
+    single_shot_limit = 80_000 if provider == "ollama" else _SINGLE_SHOT_CHARS
+    if len(transcript_md) <= single_shot_limit:
         out = _summary_call(transcript_md, meeting, timeout, folder)
     else:
         n_parts = len(transcript_md) // _MAP_CHUNK_CHARS + 1

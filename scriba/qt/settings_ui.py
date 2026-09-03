@@ -1089,7 +1089,12 @@ class SettingsWindow(QWidget):
         try:
             import importlib.util as ilu
 
-            tinha_voices = ilu.find_spec("pyannote") is not None
+            tinha_voices = (
+                ilu.find_spec("pyannote") is not None
+                or (d / "pyannote").exists()
+                or getattr(getattr(self.app, "cfg", None), "diarization", None) is not None
+                and getattr(self.app.cfg.diarization, "enabled", False)
+            )
         except Exception:
             tinha_voices = False
 

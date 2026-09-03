@@ -161,12 +161,16 @@ def _http_json(url: str, body: dict, *, timeout: int, headers: dict | None = Non
 
 def _ollama(cfg, system_prompt, user_payload, *, timeout):
     base = (cfg.ollama_base_url or cfg.base_url or _OLLAMA_DEFAULT).rstrip("/")
+    num_ctx = getattr(cfg, "num_ctx", None) or getattr(cfg, "ollama_num_ctx", None) or 32768
     body = {
         "model": cfg.ollama_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_payload},
         ],
+        "options": {
+            "num_ctx": int(num_ctx),
+        },
         "stream": False,
     }
     data = _http_json(f"{base}/api/chat", body, timeout=timeout)
